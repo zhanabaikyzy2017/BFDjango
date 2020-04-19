@@ -7,11 +7,11 @@ from django.http import Http404
 from rest_framework.decorators import action
 from rest_framework.response import Response
 import logging
-
+from django.db.models import Avg, Min, Max, Sum, Count, F
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 
-logger = logging.getLogger(__name__)
-logger2 = logging.getLogger('shopp')
+logger2 = logging.getLogger(__name__)
+logger = logging.getLogger('shopp')
 
 
 
@@ -27,7 +27,7 @@ class CategoryListViewSet(mixins.ListModelMixin,
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return Category.objects.for_user(user=self.request.user)
+        return Category.objects.for_user(user=self.request.user).annotate(products_count=Count('products'))
 
     def perform_create(self, serializer):
         serializer.save(created_by = self.request.user)
@@ -53,10 +53,12 @@ class ProductListViewSet(mixins.CreateModelMixin,
 
 
     serializer_class = ProductSerilizer
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
     parser_classes = (FormParser, MultiPartParser, JSONParser)
     # queryset = Product.objects.all()
     def get_queryset(self):
+        if self.action == 'list':
+            return Product.objects.select_related('category')
         return Product.status_check.all()
 
 
@@ -67,8 +69,18 @@ class ProductListViewSet(mixins.CreateModelMixin,
         # logger.debug(f'New Product created, NAME: {serializer.instance.id}')
         logger2.info(f'new Product created by: {self.request.user}')
 
+    @action(methods=['GET'], detail=False)
+    def price_report(self, request):
+        data = [
+            Product.objects.aggregate(Avg('price')),
+            Category.objects.values('name').annotate(Count('products'))
+        ]
 
-
+        return Response(data)
+    @action(methods=['GET'], detail=True)
+    def price_update(selfself, request, pk):
+        Product.objects.update(price=F('price')+pk)
+        return Response("ok")
 
 
 

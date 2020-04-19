@@ -8,6 +8,7 @@ class CategorySerializer(serializers.Serializer):
     name = serializers.CharField(max_length=300)
     type = serializers.CharField(max_length=200)
     created_by = MyUserSerializer(read_only=True,)
+    products_count = serializers.IntegerField(default=0)
 
     def create(self, validated_data):
         category = Category(**validated_data)
@@ -27,8 +28,8 @@ class ProductSerilizer(serializers.ModelSerializer):
     count = serializers.IntegerField(required=True)
     status = serializers.IntegerField(required=True)
     # picture = serializers.ImageField(required=True)
-    # из за default трабл
+    category_type = serializers.CharField(source='category.type')
 
     class Meta:
         model = Product
-        fields = ('id','name','price','count','status','category','picture')
+        fields = ('id','name','price','count','status','category','picture','category_type')
